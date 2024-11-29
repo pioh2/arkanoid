@@ -15,4 +15,4 @@
 - Пробел - запуск мяча / прыжок платформы
 
 ## Демо
-Игра доступна по адресу: https://pioh2.github.io/arkanoid/ 
+Игра доступна по адресу: https://pioh2.github.io/arkanoid/
