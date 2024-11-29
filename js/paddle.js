@@ -4,8 +4,8 @@ class Paddle {
     this.height = PADDLE_HEIGHT;
     this.reset();
 
-    this.maxSpeed = Math.floor(CANVAS_WIDTH * 0.026);
-    this.acceleration = Math.floor(CANVAS_WIDTH * 0.0013);
+    this.maxSpeed = Math.floor(CANVAS_WIDTH * 0.04);
+    this.acceleration = Math.floor(CANVAS_WIDTH * 0.003);
     this.friction = 0.85;
     this.velocity = 0;
 

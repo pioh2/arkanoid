@@ -40,33 +40,32 @@ class Ball {
 
   launch(paddleVelocity) {
     const angle = -Math.PI / 4 + (Math.random() * Math.PI) / 2;
-    const speed = this.baseSpeed + Math.abs(paddleVelocity.x) * 0.05;
+    const speed = this.baseSpeed;
 
     this.dx = speed * Math.sin(angle);
     this.dy = -speed * Math.cos(angle);
+
+    this.dx += paddleVelocity.x * 0.8;
   }
 
   bounceOffPaddle(paddle) {
-    const paddleCenter = paddle.x + paddle.width / 2;
-    const hitPoint = (this.x - paddleCenter) / (paddle.width / 2);
     const paddleVelocity = paddle.getTotalVelocity();
-
     const currentSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
 
-    const bounceAngle = (hitPoint * Math.PI) / 3;
+    let horizontalSpeed = this.dx;
 
-    this.dx = currentSpeed * Math.sin(bounceAngle);
-    this.dy = -Math.abs(currentSpeed * Math.cos(bounceAngle));
+    const velocityDiff = paddleVelocity.x - horizontalSpeed;
+    horizontalSpeed += velocityDiff * 0.3;
 
-    this.dx += paddleVelocity.x * 0.3;
+    let verticalSpeed = Math.abs(this.dy);
 
     if (paddleVelocity.y < 0) {
-      const speedBoost = Math.abs(paddleVelocity.y) * 0.5;
-      const currentSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-      const scale = (currentSpeed + speedBoost) / currentSpeed;
-      this.dx *= scale;
-      this.dy *= scale;
+      const speedBoost = Math.abs(paddleVelocity.y) * 0.8;
+      verticalSpeed += speedBoost;
     }
+
+    this.dx = horizontalSpeed;
+    this.dy = -verticalSpeed;
   }
 
   increaseSpeed() {
