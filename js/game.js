@@ -175,13 +175,12 @@ class Game {
     }
 
     for (const block of this.blocks) {
-      if (block.active && Collision.checkCircleRect(this.ball, block)) {
-        const collision = Collision.resolveCircleRect(this.ball, block);
-        if (collision.side === "horizontal") {
-          this.ball.dx = -this.ball.dx;
-        } else {
-          this.ball.dy = -this.ball.dy;
-        }
+      const collision = block.checkCollision(this.ball);
+      if (collision) {
+        const dot =
+          this.ball.dx * collision.normal.x + this.ball.dy * collision.normal.y;
+        this.ball.dx = this.ball.dx - 2 * dot * collision.normal.x;
+        this.ball.dy = this.ball.dy - 2 * dot * collision.normal.y;
 
         this.createFlashEffect(this.ball.x, this.ball.y);
 
