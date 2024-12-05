@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Арканоид</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <div id="start-screen" class="screen">
+        <h1>Арканоид</h1>
+        <button id="start-button">Начать игру</button>
+      </div>
+      <div id="game-screen" class="screen">
+        <div class="game-stats">
+          <span>Очки: <span id="score">0</span></span>
+          <span>Жизни: <span id="lives">3</span></span>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+      </div>
+      <div id="game-over-screen" class="screen">
+        <h2>Игра окончена</h2>
+        <p>Ваш счет: <span id="final-score">0</span></p>
+        <button id="restart-button">Играть снова</button>
+      </div>
+    </div>
+    <script src="js/utils.js"></script>
+    <script src="js/collision.js"></script>
+    <script src="js/ball.js"></script>
+    <script src="js/paddle.js"></script>
+    <script src="js/block.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
