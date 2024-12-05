@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+stable-baselines3
+redis
+websockets
+numpy
+torch
+gymnasium
+python-dotenv

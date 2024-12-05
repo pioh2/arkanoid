@@ -1,273 +1,182 @@
 class Game {
   constructor() {
     this.canvas = document.getElementById("gameCanvas");
-    this.canvas.width = CANVAS_WIDTH;
-    this.canvas.height = CANVAS_HEIGHT;
-    this.ctx = this.canvas.getContext("2d");
+    this.engine = new GameEngine();
+    this.renderer = new GameRenderer(this.canvas);
 
-    this.paddle = new Paddle();
-    this.ball = null;
-    this.blocks = Block.createBlocks();
-
-    this.score = 0;
-    this.lives = 3;
-    this.gameLoop = null;
-    this.keys = {};
-    this.isPlaying = false;
-
-    this.sounds = {
-      paddleHit: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/2661/2661-preview.mp3"
-      ),
-      blockHit: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/2582/2582-preview.mp3"
-      ),
-      blockBreak: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/2580/2580-preview.mp3"
-      ),
-      wallHit: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/2585/2585-preview.mp3"
-      ),
-      lose: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/146/146-preview.mp3"
-      ),
-      gameOver: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3"
-      ),
-      victory: new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"
-      ),
-    };
-
-    Object.values(this.sounds).forEach((sound) => {
-      sound.load();
-      sound.volume = 0.9;
-    });
-
-    this.sounds.gameOver.volume = 0.7;
-    this.sounds.lose.volume = 1.0;
+    this.aiEnabled = false;
+    this.ws = null;
+    this.lastUpdateTime = performance.now();
+    this.accumulatedTime = 0;
+    this.currentAction = 0;
 
     this.setupEventListeners();
-    this.initGame();
-  }
-
-  initGame() {
-    this.paddle.reset();
-    this.ball = new Ball(
-      this.paddle.x + this.paddle.width / 2,
-      this.paddle.y - BALL_RADIUS
-    );
-    showScreen("start-screen");
+    this.updateStats();
   }
 
   setupEventListeners() {
     document.addEventListener("keydown", (e) => {
-      this.keys[e.key] = true;
-      if (e.code === "Space") {
-        if (!this.isPlaying) {
-          this.isPlaying = true;
-          this.ball.launch(this.paddle.getTotalVelocity());
+      if (!this.aiEnabled) {
+        if (e.key === "ArrowLeft") {
+          this.currentAction = -1;
+        } else if (e.key === "ArrowRight") {
+          this.currentAction = 1;
+        } else if (e.key === " ") {
+          this.currentAction = 2;
+        } else if (e.key === "Enter") {
+          this.currentAction = 3;
         }
-        this.paddle.jump();
       }
     });
-    document.addEventListener("keyup", (e) => (this.keys[e.key] = false));
 
-    document
-      .getElementById("start-button")
-      .addEventListener("click", () => this.start());
-    document
-      .getElementById("restart-button")
-      .addEventListener("click", () => this.restart());
-  }
-
-  start() {
-    showScreen("game-screen");
-    this.isPlaying = false;
-    if (!this.gameLoop) {
-      this.gameLoop = requestAnimationFrame(() => this.update());
-    }
-  }
-
-  restart() {
-    this.paddle.reset();
-    this.ball = new Ball(
-      this.paddle.x + this.paddle.width / 2,
-      this.paddle.y - BALL_RADIUS
-    );
-    this.blocks = Block.createBlocks();
-    this.score = 0;
-    this.lives = 3;
-    this.isPlaying = false;
-    this.updateScore();
-    this.updateLives();
-    this.start();
-  }
-
-  createFlashEffect(x, y) {
-    const flash = document.createElement("div");
-    flash.className = "flash";
-    flash.style.left = x + "px";
-    flash.style.top = y + "px";
-    document.body.appendChild(flash);
-
-    flash.addEventListener("animationend", () => {
-      document.body.removeChild(flash);
-    });
-  }
-
-  createBorderFlash() {
-    const flash = document.createElement("div");
-    flash.className = "border-flash";
-    document.body.appendChild(flash);
-
-    flash.offsetHeight;
-
-    flash.classList.add("active");
-    flash.addEventListener("animationend", () => {
-      document.body.removeChild(flash);
-    });
-  }
-
-  createScreenFlash(type) {
-    const flash = document.createElement("div");
-    flash.className = `screen-flash ${type}`;
-    document.body.appendChild(flash);
-
-    flash.addEventListener("animationend", () => {
-      document.body.removeChild(flash);
-    });
-  }
-
-  playSound(soundName) {
-    const sound = this.sounds[soundName];
-    if (sound) {
-      sound.currentTime = 0;
-      sound.play().catch(() => {});
-    }
-  }
-
-  update() {
-    this.handleInput();
-    this.paddle.update();
-
-    if (this.isPlaying) {
-      this.ball.update();
-
+    document.addEventListener("keyup", (e) => {
       if (
-        this.ball.x - this.ball.radius <= 0 ||
-        this.ball.x + this.ball.radius >= CANVAS_WIDTH ||
-        this.ball.y - this.ball.radius <= 0
+        !this.aiEnabled &&
+        (e.key === "ArrowLeft" || e.key === "ArrowRight")
       ) {
-        this.createBorderFlash();
-        this.playSound("wallHit");
+        this.currentAction = 0;
       }
-    } else {
-      this.ball.x = this.paddle.x + this.paddle.width / 2;
-      this.ball.y = this.paddle.y - BALL_RADIUS;
+    });
+
+    document.getElementById("start-button").addEventListener("click", () => {
+      this.startGame();
+    });
+
+    document.getElementById("restart-button").addEventListener("click", () => {
+      this.resetGame();
+      showScreen("start-screen");
+    });
+
+    document.getElementById("toggle-ai").addEventListener("click", () => {
+      this.toggleAI();
+    });
+  }
+
+  toggleAI() {
+    this.aiEnabled = !this.aiEnabled;
+    const button = document.getElementById("toggle-ai");
+    const status = document.getElementById("ai-status");
+
+    button.textContent = this.aiEnabled ? "Выключить ИИ" : "Включить ИИ";
+    button.classList.toggle("active", this.aiEnabled);
+    status.textContent = this.aiEnabled ? "Включен" : "Выключен";
+    status.classList.toggle("active", this.aiEnabled);
+
+    if (this.aiEnabled) {
+      this.connectToAI();
+    } else if (this.ws) {
+      this.ws.close();
+      this.ws = null;
     }
+  }
 
-    if (this.isPlaying && Collision.checkCircleRect(this.ball, this.paddle)) {
-      this.ball.y = this.paddle.y - this.ball.radius;
-      this.ball.bounceOffPaddle(this.paddle);
-      this.createFlashEffect(this.ball.x, this.ball.y);
-      this.playSound("paddleHit");
-    }
+  connectToAI() {
+    this.ws = new WebSocket("ws://localhost:8000/ws");
 
-    for (const block of this.blocks) {
-      const collision = block.checkCollision(this.ball);
-      if (collision) {
-        const dot =
-          this.ball.dx * collision.normal.x + this.ball.dy * collision.normal.y;
-        this.ball.dx = this.ball.dx - 2 * dot * collision.normal.x;
-        this.ball.dy = this.ball.dy - 2 * dot * collision.normal.y;
+    this.ws.onopen = () => {
+      console.log("Connected to AI server");
+    };
 
-        this.createFlashEffect(this.ball.x, this.ball.y);
-
-        if (block.hit()) {
-          this.score += block.maxHits * 10;
-          this.updateScore();
-          this.ball.increaseSpeed();
-          this.playSound("blockBreak");
-        } else {
-          this.playSound("blockHit");
-        }
-        break;
+    this.ws.onclose = () => {
+      console.log("Disconnected from AI server");
+      if (this.aiEnabled) {
+        this.toggleAI();
       }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      if (this.aiEnabled) {
+        this.toggleAI();
+      }
+    };
+
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === "action") {
+        this.currentAction = message.data.move;
+      }
+    };
+  }
+
+  startGame() {
+    this.gameStarted = true;
+    showScreen("game-screen");
+    if (this.aiEnabled && !this.ws) {
+      this.connectToAI();
+    }
+    requestAnimationFrame(() => this.gameLoop());
+  }
+
+  resetGame() {
+    this.engine.reset();
+    this.currentAction = 0;
+    this.gameStarted = false;
+    this.updateStats();
+  }
+
+  updateStats() {
+    const state = this.engine.getState();
+    document.getElementById("score").textContent = state.score;
+    document.getElementById("lives").textContent = state.lives;
+    document.getElementById("final-score").textContent = state.score;
+  }
+
+  gameLoop() {
+    if (!this.gameStarted) return;
+
+    const currentTime = performance.now();
+    const deltaTime = currentTime - this.lastUpdateTime;
+    this.lastUpdateTime = currentTime;
+
+    // Накапливаем время
+    this.accumulatedTime += deltaTime;
+
+    // Ограничиваем накопленное время
+    if (this.accumulatedTime > 200) {
+      this.accumulatedTime = 200;
     }
 
-    if (this.ball.y + this.ball.radius > CANVAS_HEIGHT) {
-      this.lives--;
-      this.updateLives();
-      this.createScreenFlash("miss");
-      this.playSound("lose");
+    // Обновляем физику с фиксированным шагом
+    while (this.accumulatedTime >= this.engine.TIMESTEP) {
+      const result = this.engine.update(
+        this.engine.TIMESTEP,
+        this.currentAction
+      );
+      this.accumulatedTime -= this.engine.TIMESTEP;
 
-      if (this.lives <= 0) {
-        this.gameOver(false);
-      } else {
-        this.isPlaying = false;
-        this.ball.reset(
-          this.paddle.x + this.paddle.width / 2,
-          this.paddle.y - BALL_RADIUS
+      // Отправляем состояние AI
+      if (this.aiEnabled && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(
+          JSON.stringify({
+            type: "state",
+            data: result.state,
+          })
         );
       }
+
+      // Проверяем условия окончания игры
+      if (result.state.gameOver || result.state.victory) {
+        if (this.aiEnabled) {
+          this.resetGame();
+          this.startGame();
+        } else {
+          showScreen("game-over-screen");
+          return;
+        }
+      }
     }
 
-    if (this.blocks.every((block) => !block.active)) {
-      this.gameOver(true);
-    }
+    // Отрисовываем текущее состояние
+    this.renderer.render(this.engine.getState());
+    this.updateStats();
 
-    this.draw();
-    if (this.gameLoop) {
-      this.gameLoop = requestAnimationFrame(() => this.update());
-    }
-  }
-
-  handleInput() {
-    if (this.keys["ArrowLeft"] || this.keys["a"]) {
-      this.paddle.move(-1);
-    }
-    if (this.keys["ArrowRight"] || this.keys["d"]) {
-      this.paddle.move(1);
-    }
-  }
-
-  draw() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.blocks.forEach((block) => block.draw(this.ctx));
-    this.paddle.draw(this.ctx);
-    if (this.ball) {
-      this.ball.draw(this.ctx);
-    }
-  }
-
-  updateScore() {
-    document.getElementById("score").textContent = this.score;
-    document.getElementById("final-score").textContent = this.score;
-  }
-
-  updateLives() {
-    document.getElementById("lives").textContent = this.lives;
-  }
-
-  gameOver(won = false) {
-    this.gameLoop = null;
-    showScreen("game-over-screen");
-    const gameOverTitle = document.querySelector("#game-over-screen h2");
-
-    if (won) {
-      gameOverTitle.textContent = "Победа!";
-      this.createScreenFlash("victory");
-      this.playSound("victory");
-    } else {
-      gameOverTitle.textContent = "Игра окончена";
-      this.createScreenFlash("game-over");
-      this.playSound("gameOver");
-    }
+    requestAnimationFrame(() => this.gameLoop());
   }
 }
 
-// Запускаем игру
-window.addEventListener("load", () => {
-  new Game();
+// Инициализация игры
+window.addEventListener("DOMContentLoaded", () => {
+  const game = new Game();
+  showScreen("start-screen");
 });

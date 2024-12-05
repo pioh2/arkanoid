@@ -10,12 +10,16 @@
     <div class="game-container">
       <div id="start-screen" class="screen">
         <h1>Арканоид</h1>
-        <button id="start-button">Начать игру</button>
+        <div class="button-group">
+          <button id="start-button">Начать игру</button>
+          <button id="toggle-ai" class="ai-button">Включить ИИ</button>
+        </div>
       </div>
       <div id="game-screen" class="screen">
         <div class="game-stats">
           <span>Очки: <span id="score">0</span></span>
           <span>Жизни: <span id="lives">3</span></span>
+          <span>ИИ: <span id="ai-status">Выключен</span></span>
         </div>
         <canvas id="gameCanvas"></canvas>
       </div>
@@ -26,10 +30,8 @@
       </div>
     </div>
     <script src="js/utils.js"></script>
-    <script src="js/collision.js"></script>
-    <script src="js/ball.js"></script>
-    <script src="js/paddle.js"></script>
-    <script src="js/block.js"></script>
+    <script src="js/game_engine.js"></script>
+    <script src="js/game_renderer.js"></script>
     <script src="js/game.js"></script>
   </body>
 </html>
